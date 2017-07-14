@@ -1,0 +1,255 @@
+Solution for 8:
+
+create view v1 as 
+select t.t_firtname||' '|| t.t_middleinitial||' '||t.t_lastname FullName,
+t.t_creditscore creditscore,l.apt_num Aptnum,b_number, t.t_id 
+from tenant t,lease l 
+where t.t_id = l.t_id;
+
+COLUMN LOC FORMAT A7 WORD_WRAPPED;
+
+create view v2 as 
+select t_id,count(req_num) NumberOfReqs
+from make_request
+group by t_id;
+
+create view v3 as 
+select t_id,count(reference) NumberOfRefs
+from tenant_references
+group by t_id;
+
+create view v4 as 
+select v3.t_id,NumberOfReqs,NumberOfRefs 
+from v2 full outer join v3
+on v2.t_id = v3.t_id;
+
+create view v5 as
+select FullName,
+creditscore,Aptnum,NumberOfRefs,NumberOfReqs,b_number
+from v4 right outer join v1
+on v4.t_id = v1.t_id
+order by fullname;
+
+
+select FullName,
+creditscore,Aptnum,NumberOfRefs,NumberOfReqs from v5;
+
+--------------------------------------------------------------------
+
+
+Q 9:
+
+select * from v5 where numberofreqs in (select max(numberofreqs) from v5);
+
+
+-------------------------------------------------------------------------
+
+Q10: Of  the  apartments  whose  tenants  have  never  made  a  repair  request,  list  the  apartment’s  floor 
+plan,  number  of  bedrooms,  number  of  bathrooms,  rental  price,  and  area.  Sort  the  list  by  area  in 
+decreasing order. 
+
+
+
+create view v6 as
+select * from v5 where numberofreqs is null;
+
+
+create view v7 as 
+select a.f_noofbedrooms,f.f_noofbathrooms,f_area,f.f_baseprice,v6.aptnum aptnum,v6.b_number b_number 
+from apartmentfloor a,floorplan f,v6 
+where v6.aptnum=a.apt_num 
+and v6.b_number=a.b_number
+and a.f_letter = f.f_letter 
+and a.f_noofbedrooms = f.f_noofbedrooms;
+
+
+create view v8 as 
+select apt_num,b_number,count(feature) nooffeatures from apartment_features group by apt_num,b_number;
+
+create view v9 as
+select v7.aptnum,v7.b_number,f_noofbedrooms,f_noofbathrooms,(f_baseprice+100)*nooffeatures,f_area 
+from v7,v8 where v7.aptnum=v8.apt_num and v7.b_number=v8.b_number order by f_area desc;
+
+select * from v9;
+
+More records needs to be populated on apartment_features;
+
+-----------------------------------------------------------------------------------------------------------------
+
+11:  List  the  request  number,  last  name  and  apartment  of  the  tenant  that  made  it,  and  description  of 
+the request with the most modifications. 
+
+
+create view v10 as
+select tenant.t_id,t_lastname,apt_num,b_number
+from tenant,lease
+where tenant.t_id= lease.t_id;
+
+create view v11 as 
+select originalreq_num,count(updatedreq_num) numberofmodifications
+from request_modification group by originalreq_num;
+
+create view v12 as
+select originalreq_num,numberofmodifications from v11
+where numberofmodifications in (select max(numberofmodifications) from v11);
+
+
+select t_lastname,apt_num,b_number,v12.originalreq_num,req_desc
+from v10,v12,request,make_request where v12.originalreq_num=make_request.req_num
+and make_request.t_id=v10.t_id
+and v12.originalreq_num = request.req_num;
+
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+12:List  the  full  name,  hourly  rate,  and  total  number  of  requests  of  each  technician.  Sort  the  list  by 
+total number of requests in descending order. 
+
+create view v13 as
+select tech_empid,count(req_num) numberofreqs from request_handle
+group by tech_empid;
+
+select tech_firstname||' '|| tech_middlename||' '||tech_lastname FullName,
+technician.tech_empid,tech_hourlyrate,numberofreqs 
+from technician,v13 
+where technician.tech_empid=v13.tech_empid;
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+13: List  the  name  of  the  employee  number,  last  name,  and  hourly  rate  of  the  technician  with  the 
+most total modifications to requests he or she has worked as the primary technician. 
+ 
+ Sol: 
+  ****************"Use v12"***************
+  
+  
+select technician.tech_empid,tech_firstname,tech_lastname,
+tech_hourlyrate,req_num 
+from request_poc,v12,technician
+where originalreq_num = req_num 
+and technician.tech_empid=request_poc.tech_empid
+  
+  
+-----------------------------------------------------------------------------------------------------------------------------------
+
+
+
+14. List  the  total  amount  of  money  spent  on  all  open  requests.  The  amount  of  money  spent  on  a 
+request  by  a  single  technician  is  the  hourly  rate  multiplied  by  the  amount  of  time  spent  on  the 
+request.  
+  
+  
+  
+select technician.tech_empid,req_num request,
+timespent,tech_hourlyrate hourlyrate,
+timespent*tech_hourlyrate amountspent 
+from request_handle ,technician 
+where request_handle.tech_empid=technician.tech_empid;
+  
+  
+  
+  
+--------------------------------------------------------------------------------------------------------------------------------------
+
+
+15: 
+create view v14 as
+select lease.apt_num,lease.b_number,
+sum(request_handle.timespent*technician.tech_hourlyrate) totalamountspent
+ from lease,make_request,request_handle,technician where
+lease.t_id=make_request.t_id and make_request.req_num=request_handle.req_num
+and request_handle.tech_empid=technician.tech_empid group by lease.apt_num,lease.b_number;
+
+
+create view v15 as
+select v8.apt_num,v8.b_number,((f_baseprice+100)*nooffeatures)*12 annumrentalprice from
+v8,apartmentfloor,floorplan where
+v8.apt_num=apartmentfloor.apt_num and
+v8.b_number =apartmentfloor.b_number and
+apartmentfloor.f_letter=floorplan.f_letter and
+apartmentfloor.f_noofbedrooms=floorplan.f_noofbedrooms; 
+
+
+select * from v14 natural join v15 where totalamountspent>annumrentalprice;
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+16.
+
+ create table technicianRating
+ select p.tech_empid,avg(e.req_rating) averageRating, 0 thresholdrating
+  from request_evaluate e,request_handle p
+ where e.req_num=p.req_num
+ group by p.tech_empid
+ 
+ 
+
+ 
+ create table technicianrating(
+tech_empid number,
+averagerating number,
+threshold float,
+primary key (tech_empid)
+);
+
+
+
+ insert into technicianrating
+ (tech_empid,averagerating,threshold)
+ select p.tech_empid,avg(e.req_rating),0
+ from request_evaluate e,request_handle p
+ where e.req_num=p.req_num
+ group by p.tech_empid;
+ 
+ 
+  update technicianrating
+ set threshold=case
+ when averagerating between 4 and 4.9 then 4
+ when averagerating between 3 and 3.9 then 3
+ when averagerating between 2 and 2.9 then 2
+ when averagerating between 1 and 1.9 then 1
+ else 5
+ end
+ 
+ select * from technicianrating1;
+ 
+ 
+ ---------------------------------------------------------------------------------------------
+ 
+ 
+ 21.
+ 
+ 
+ Technician with highest average rating:
+
+ 
+ create view technicianAverageRating 
+  select p.tech_empid,avg(e.req_rating) averageRating
+  from request_evaluate e,request_handle p
+ where e.req_num=p.req_num
+ group by p.tech_empid
+
+ create view highRatedTechnician as
+ select * from technicianAverageRating where averagerating
+in (select max(averagerating) from technicianaveragerating)
+
+create view v18 as
+ select * from request where req_status='open' and
+ req_num in (select updatedreq_num  from request_modification)
+ 
+create view v19 as 
+select * from v18,highRatedTechnician where req_loggeddate <= all(select req_loggeddate from v18);
+
+
+
+update request_poc p
+ set p.tech_empid = (
+ select v19.tech_empid from v19)
+ where p.req_num=(select v19.req_num from v19);
+
+****inserted records into request_evaluate********************

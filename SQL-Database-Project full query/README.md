@@ -1,0 +1,2 @@
+# SQL-Database-Project
+Designed a database used to store a sales company’s data, including company’s products, as well as contain customer, staff, wholesaler and order details. First identified entities, attributes, primary keys and their relationships and cardinality. Then developed a prototype ERD. I showed: INNER JOIN queries; OUTER JOIN(2 x left, 2 x full, 2 x right) queries; CUBE queries; sub-queries; PL/SQL procedures as part of one package, included the use of a cursor, save point, rollback; PL/SQL functions and Triggers.

@@ -1,0 +1,17 @@
+Follow the below steps for creating a user in Oracle.
+--Connect as System user
+
+CONNECT <USER-NAME>/<PASSWORD>@<DATABASE NAME>;
+--Create user query
+
+CREATE USER <USER NAME> IDENTIFIED BY <PASSWORD>;
+--Provide roles
+
+GRANT CONNECT,RESOURCE,DBA TO <USER NAME>;
+--Provide privileges
+
+GRANT CREATE SESSION GRANT ANY PRIVILEGE TO <USER NAME>;
+GRANT UNLIMITED TABLESPACE TO <USER NAME>;
+--Provide access to tables.
+
+GRANT SELECT,UPDATE,INSERT ON <TABLE NAME> TO <USER NAME>;
